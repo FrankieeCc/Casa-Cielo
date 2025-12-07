@@ -2,13 +2,13 @@ import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCQpjNVTNve64hhbTClg5CVBsdnU8EyxLg",
-  authDomain: "casa-cielo.firebaseapp.com",
-  databaseURL: "https://casa-cielo-default-rtdb.firebaseio.com",
-  projectId: "casa-cielo",
-  storageBucket: "casa-cielo.firebasestorage.app",
-  messagingSenderId: "363754880564",
-  appId: "1:363754880564:web:29940b7799e4a405201461"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL
 };
 
 const app = initializeApp(firebaseConfig);
