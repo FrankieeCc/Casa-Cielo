@@ -1,4 +1,21 @@
-import React, { useState, useEffect } from 'react';
+<button
+              onDoubleClick={() => setShowAdminLogin(true)}
+              style={{
+                padding: '12px',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                color: '#999',
+                background: '#f5f5f5',
+                transition: 'all 0.3s',
+                marginTop: '10px'
+              }}
+              title="Haz doble clic para acceso admin"
+            >
+              RestauApp v1.0
+            </button>import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { ref, set, onValue, remove, update } from 'firebase/database';
 
@@ -6,6 +23,7 @@ function App() {
   const [userRole, setUserRole] = useState(null);
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState(Array.from({ length: 12 }, (_, i) => ({ id: i + 1, occupied: false })));
   const [loading, setLoading] = useState(true);
@@ -565,8 +583,32 @@ function App() {
     const completedOrders = orders.filter(o => o.status === 'entregado').length;
     const totalOrders = orders.length;
 
+    // Agrupar pedidos por día
+    const ordersByDay = {};
+    orders.forEach(order => {
+      const date = new Date(order.id);
+      const dateStr = date.toLocaleDateString('es-CO');
+      if (!ordersByDay[dateStr]) {
+        ordersByDay[dateStr] = [];
+      }
+      ordersByDay[dateStr].push(order);
+    });
+
+    // Calcular ganancias por día
+    const dailyStats = Object.keys(ordersByDay).map(day => {
+      const dayOrders = ordersByDay[day];
+      const dayCompleted = dayOrders.filter(o => o.status === 'entregado');
+      const dayTotal = dayCompleted.reduce((sum, o) => sum + o.total, 0);
+      return {
+        day,
+        total: dayTotal,
+        orders: dayCompleted.length,
+        allOrders: dayOrders.length
+      };
+    }).sort((a, b) => new Date(b.day) - new Date(a.day));
+
     return (
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 15px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 15px' }}>
         <h1 style={{ fontSize: '1.8rem', margin: '20px 0 30px', textAlign: 'center', fontWeight: 'bold', color: '#1e3c72' }}>
           Panel de Ventas
         </h1>
@@ -575,7 +617,7 @@ function App() {
           <div style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '20px', borderLeft: '5px solid #4CAF50', transition: 'all 0.3s' }}>
             <div style={{ fontSize: '2.5rem' }}>$</div>
             <div>
-              <p style={{ color: '#999', fontSize: '0.95rem', marginBottom: '5px', fontWeight: '600' }}>Ventas Completadas</p>
+              <p style={{ color: '#999', fontSize: '0.95rem', marginBottom: '5px', fontWeight: '600' }}>Ventas Hoy</p>
               <p style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333' }}>${dailySales.toLocaleString()}</p>
             </div>
           </div>
@@ -597,8 +639,39 @@ function App() {
           </div>
         </div>
 
-        <h2 style={{ fontSize: '1.3rem', fontWeight: 'bold', margin: '30px 0 15px', color: '#333' }}>Historial de Ventas</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto' }}>
+        <div style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 'bold', margin: '0 0 20px 0', color: '#333', borderBottom: '2px solid #1e3c72', paddingBottom: '10px' }}>Ganancias por Día</h2>
+          
+          {dailyStats.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#999', padding: '30px' }}>Sin pedidos completados</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#333' }}>Fecha</th>
+                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Pedidos Completados</th>
+                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Total Pedidos</th>
+                    <th style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#333' }}>Ganancias</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyStats.map((stat, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #eee', background: idx % 2 === 0 ? 'white' : '#f9f9f9' }}>
+                      <td style={{ padding: '12px', color: '#333', fontWeight: '600' }}>{stat.day}</td>
+                      <td style={{ padding: '12px', textAlign: 'center', color: '#666' }}>{stat.orders}</td>
+                      <td style={{ padding: '12px', textAlign: 'center', color: '#666' }}>{stat.allOrders}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#4CAF50', fontSize: '1.1rem' }}>${stat.total.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 'bold', margin: '30px 0 15px', color: '#333' }}>Historial Detallado de Pedidos</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '600px', overflowY: 'auto' }}>
           {orders.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#999', padding: '20px', fontSize: '0.9rem' }}>No hay pedidos registrados</p>
           ) : (
@@ -678,23 +751,99 @@ function App() {
             >
               Cocina
             </button>
-            <button
-              onClick={() => setUserRole('admin')}
+
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showAdminLogin && !adminAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ background: 'white', borderRadius: '12px', padding: '50px 40px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', maxWidth: '400px', width: '100%' }}>
+          <h1 style={{ fontSize: '1.8rem', marginBottom: '10px', color: '#1e3c72', fontWeight: 'bold', textAlign: 'center' }}>Acceso Administrador</h1>
+          <p style={{ color: '#666', marginBottom: '30px', fontSize: '0.95rem', textAlign: 'center' }}>Ingresa tu contraseña para continuar</p>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: '#333', fontWeight: '600', fontSize: '0.95rem' }}>Contraseña</label>
+            <input
+              type="password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  if (adminPassword === ADMIN_PASSWORD) {
+                    setAdminAuthenticated(true);
+                    setUserRole('admin');
+                    setAdminPassword('');
+                  } else {
+                    alert('Contraseña incorrecta');
+                    setAdminPassword('');
+                  }
+                }
+              }}
+              placeholder="Ingresa tu contraseña"
               style={{
-                padding: '15px',
-                border: 'none',
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
                 borderRadius: '8px',
                 fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                color: 'white',
-                background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
-                transition: 'all 0.3s'
+                boxSizing: 'border-box',
+                fontFamily: 'inherit'
               }}
-            >
-              Administrador
-            </button>
+              autoFocus
+            />
           </div>
+          <button
+            onClick={() => {
+              if (adminPassword === ADMIN_PASSWORD) {
+                setAdminAuthenticated(true);
+                setUserRole('admin');
+                setAdminPassword('');
+              } else {
+                alert('Contraseña incorrecta');
+                setAdminPassword('');
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+          >
+            Ingresar
+          </button>
+
+          <button
+            onClick={() => {
+              setShowAdminLogin(false);
+              setAdminPassword('');
+            }}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#f5f5f5',
+              color: '#666',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+              marginTop: '15px',
+              transition: 'all 0.3s'
+            }}
+          >
+            Volver
+          </button>
         </div>
       </div>
     );
